@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using Newtonsoft.Json;
+using System.Text.Json;
 
 [ApiController]
 [Route("api/whatsapp")]
@@ -34,23 +35,45 @@ public class WhatsAppController : ControllerBase
 
     // 發送消息
     [HttpPost("webhook")]
-    public IActionResult ReceiveMessage([FromBody] dynamic request)
+    public IActionResult ReceiveMessage([FromBody] JsonElement request)
     {
-        Console.WriteLine($"Incoming Webhook: {JsonConvert.SerializeObject(request, Formatting.Indented)}");
-
-        // 解析收到的消息
-        var sender = request.entry[0]?.changes[0]?.value?.messages?[0]?.from;
-        var messageText = request.entry[0]?.changes[0]?.value?.messages?[0]?.text?.body;
-
-        if (!string.IsNullOrEmpty(sender) && !string.IsNullOrEmpty(messageText))
+        try
         {
-            Console.WriteLine($"Received message from {sender}: {messageText}");
+            Console.WriteLine($"Incoming Webhook: {request}");
 
-            // 自動回覆
-            _whatsAppService.SendMessageAsync(sender, $"You said: {messageText}").Wait();
+            // 檢查是否包含 entry
+            if (request.TryGetProperty("entry", out var entry))
+            {
+                foreach (var change in entry[0].GetProperty("changes").EnumerateArray())
+                {
+                    var value = change.GetProperty("value");
+
+                    // 處理消息
+                    if (value.TryGetProperty("messages", out var messages))
+                    {
+                        foreach (var message in messages.EnumerateArray())
+                        {
+                            var from = message.GetProperty("from").GetString();
+                            var text = message.GetProperty("text").GetProperty("body").GetString();
+
+                            Console.WriteLine($"Message received from {from}: {text}");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                Console.WriteLine("No 'entry' found in the request.");
+                return BadRequest("Invalid Webhook structure: No 'entry' found.");
+            }
+
+            return Ok("Webhook processed successfully!");
         }
-
-        return Ok();
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error processing Webhook: {ex.Message}");
+            return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
     }
 }
 
