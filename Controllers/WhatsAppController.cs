@@ -35,13 +35,13 @@ public class WhatsAppController : ControllerBase
 
     // 發送消息
     [HttpPost("webhook")]
-    public IActionResult ReceiveMessage([FromBody] JsonElement request)
+    public async Task<IActionResult> ReceiveMessage([FromBody] JsonElement request)
     {
         try
         {
             Console.WriteLine($"Incoming Webhook: {request}");
 
-            // 檢查是否包含 entry
+            // 確保 JSON 結構正確
             if (request.TryGetProperty("entry", out var entry))
             {
                 foreach (var change in entry[0].GetProperty("changes").EnumerateArray())
@@ -53,10 +53,15 @@ public class WhatsAppController : ControllerBase
                     {
                         foreach (var message in messages.EnumerateArray())
                         {
-                            var from = message.GetProperty("from").GetString();
-                            var text = message.GetProperty("text").GetProperty("body").GetString();
+                            var from = message.GetProperty("from").GetString(); // 發送者的 WhatsApp 編號
+                            var text = message.GetProperty("text").GetProperty("body").GetString(); // 訊息內容
 
                             Console.WriteLine($"Message received from {from}: {text}");
+
+                            // 自動回覆訊息
+                            var reply = $"收到您的訊息：{text}";
+                            await _whatsAppService.SendMessageAsync(from, reply); // 使用你的 SendMessageAsync 方法
+                            Console.WriteLine($"Reply sent to {from}: {reply}");
                         }
                     }
                 }
