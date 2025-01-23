@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
 
 [ApiController]
 [Route("api/whatsapp")]
@@ -32,32 +33,24 @@ public class WhatsAppController : ControllerBase
     }
 
     // 發送消息
-    [HttpPost("send")]
-    public async Task<IActionResult> SendMessage([FromBody] WhatsAppMessageRequest request)
+    [HttpPost("webhook")]
+    public IActionResult ReceiveMessage([FromBody] dynamic request)
     {
-        if (string.IsNullOrEmpty(request.To))
+        Console.WriteLine($"Incoming Webhook: {JsonConvert.SerializeObject(request, Formatting.Indented)}");
+
+        // 解析收到的消息
+        var sender = request.entry[0]?.changes[0]?.value?.messages?[0]?.from;
+        var messageText = request.entry[0]?.changes[0]?.value?.messages?[0]?.text?.body;
+
+        if (!string.IsNullOrEmpty(sender) && !string.IsNullOrEmpty(messageText))
         {
-            return BadRequest("Recipient (To) cannot be null or empty.");
+            Console.WriteLine($"Received message from {sender}: {messageText}");
+
+            // 自動回覆
+            _whatsAppService.SendMessageAsync(sender, $"You said: {messageText}").Wait();
         }
 
-        if (string.IsNullOrEmpty(request.Message))
-        {
-            return BadRequest("Message cannot be null or empty.");
-        }
-
-        try
-        {
-            await _whatsAppService.SendMessageAsync(request.To, request.Message);
-            return Ok(new { success = true, message = "Message sent successfully!" });
-        }
-        catch (HttpRequestException)
-        {
-            return StatusCode(502, "Failed to connect to WhatsApp API.");
-        }
-        catch (Exception ex)
-        {
-            return StatusCode(500, $"An unexpected error occurred: {ex.Message}");
-        }
+        return Ok();
     }
 }
 
