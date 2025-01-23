@@ -14,9 +14,9 @@ public class WhatsAppService
     {
         _httpClient = httpClient;
 
-        _accessToken = configuration["WhatsApp:AccessToken"]
+        _accessToken = configuration["WhatsApp_AccessToken"]
             ?? throw new ArgumentNullException(nameof(_accessToken), "AccessToken 未配置於 appsettings.json 或環境變數中");
-        _phoneNumberId = configuration["WhatsApp:PhoneNumberId"]
+        _phoneNumberId = configuration["WhatsApp_PhoneNumberId"]
             ?? throw new ArgumentNullException(nameof(_phoneNumberId), "PhoneNumberId 未配置於 appsettings.json 或環境變數中");
     }
 
