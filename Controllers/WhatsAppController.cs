@@ -14,14 +14,17 @@ public class WhatsAppController : ControllerBase
 
     // 接收驗證請求 (Webhook Verification)
     [HttpGet("webhook")]
-    public IActionResult VerifyWebhook([FromQuery] string hub_mode, [FromQuery] string hub_challenge, [FromQuery] string hub_verify_token)
+    public IActionResult VerifyWebhook(
+        [FromQuery(Name = "hub.mode")] string hubMode,
+        [FromQuery(Name = "hub.verify_token")] string hubVerifyToken,
+        [FromQuery(Name = "hub.challenge")] string hubChallenge)
     {
-        const string verifyToken = "adam880614"; // 替換為實際的 Verify Token
+        const string verifyToken = "adam880614"; // 替換為你的 Verify Token
 
-        if (hub_mode == "subscribe" && hub_verify_token == verifyToken)
+        if (hubMode == "subscribe" && hubVerifyToken == verifyToken)
         {
             Console.WriteLine("Webhook verification succeeded.");
-            return Ok(hub_challenge);
+            return Ok(hubChallenge); // 返回 hub.challenge
         }
 
         Console.WriteLine("Webhook verification failed.");
